@@ -53,3 +53,5 @@ BlueClaw/
 ## License
 
 Private -- all rights reserved.
+
+Third-party dependencies are licensed under MIT and Apache 2.0. See [THIRD_PARTY_NOTICES](BlueClaw/THIRD_PARTY_NOTICES) for details.

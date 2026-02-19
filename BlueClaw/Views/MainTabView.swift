@@ -183,8 +183,39 @@ struct SettingsView: View {
                     }
                 }
             }
+
+            Section {
+                NavigationLink("Open Source Licenses") {
+                    LicensesView()
+                }
+            }
         }
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
+    }
+}
+
+// MARK: - Licenses View
+
+struct LicensesView: View {
+    var body: some View {
+        ScrollView {
+            Text(licenseText)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(AppColors.textSecondary)
+                .padding()
+        }
+        .background(AppColors.background)
+        .navigationTitle("Licenses")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var licenseText: String {
+        guard let url = Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: nil)
+                ?? Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "txt"),
+              let text = try? String(contentsOf: url) else {
+            return "License information unavailable."
+        }
+        return text
     }
 }
