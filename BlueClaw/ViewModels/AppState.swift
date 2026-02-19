@@ -68,6 +68,14 @@ final class AppState {
     // MARK: - SSH Tunnel + WebSocket Connection
 
     func connectViaSSH(sshHost: String, sshUser: String, sshPort: Int = 22, token: String) async {
+        // Tear down any existing connection first to avoid stale listeners
+        stopReconnectLoop()
+        stopHealthCheckLoop()
+        eventTask?.cancel()
+        eventTask = nil
+        await client.disconnect()
+        await tunnel.disconnect()
+
         self.sshHost = sshHost
         self.sshUser = sshUser
         connectionStatus = .connecting
@@ -129,6 +137,14 @@ final class AppState {
     // MARK: - Direct Connection (fallback)
 
     func connect(hostname: String, token: String) async {
+        // Tear down any existing connection first to avoid stale listeners
+        stopReconnectLoop()
+        stopHealthCheckLoop()
+        eventTask?.cancel()
+        eventTask = nil
+        await client.disconnect()
+        await tunnel.disconnect()
+
         self.hostname = hostname
         connectionStatus = .connecting
         lastConnectionError = nil

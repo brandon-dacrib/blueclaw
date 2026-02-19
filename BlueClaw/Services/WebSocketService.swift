@@ -140,6 +140,11 @@ actor WebSocketService: NSObject {
             continuation.resume(throwing: BlueClawError.notConnected)
         }
         pendingRequests.removeAll()
+
+        // Reset event stream so a fresh one is created on next connection
+        eventContinuation?.finish()
+        eventContinuation = nil
+        _events = nil
     }
 
     func send(method: String, params: (any Encodable & Sendable)? = nil) async throws -> RawFrame {
