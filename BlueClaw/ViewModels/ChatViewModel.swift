@@ -14,6 +14,7 @@ final class ChatViewModel {
     var isLoadingHistory = false
     var error: String?
     var pendingImage: UIImage?
+    var sensitiveWarning: [SensitiveMatch]?
 
     init(sessionKey: String, client: GatewayClient) {
         self.sessionKey = sessionKey
@@ -53,6 +54,20 @@ final class ChatViewModel {
 
     func send() async {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty || pendingImage != nil, !isStreaming else { return }
+
+        // Scan for sensitive content before sending
+        let matches = ContentScanner.scan(text)
+        if !matches.isEmpty {
+            sensitiveWarning = matches
+            return
+        }
+
+        await performSend()
+    }
+
+    private func performSend() async {
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let image = pendingImage
         guard !text.isEmpty || image != nil, !isStreaming else { return }
 
@@ -81,6 +96,17 @@ final class ChatViewModel {
             isStreaming = false
             self.error = error.localizedDescription
         }
+    }
+
+    // MARK: - Sensitive Content
+
+    func confirmSend() async {
+        sensitiveWarning = nil
+        await performSend()
+    }
+
+    func cancelSend() {
+        sensitiveWarning = nil
     }
 
     // MARK: - Abort

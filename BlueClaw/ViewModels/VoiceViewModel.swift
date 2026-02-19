@@ -15,6 +15,8 @@ final class VoiceViewModel {
     var isWaiting = false
     var isContinuousMode = false
     var error: String?
+    var sensitiveWarning: [SensitiveMatch]?
+    var pendingVoiceText: String?
 
     private var currentRunId: String?
 
@@ -47,6 +49,18 @@ final class VoiceViewModel {
     // MARK: - Send
 
     private func sendVoiceMessage(_ text: String) async {
+        // Scan for sensitive content before sending
+        let matches = ContentScanner.scan(text)
+        if !matches.isEmpty {
+            pendingVoiceText = text
+            sensitiveWarning = matches
+            return
+        }
+
+        await performVoiceSend(text)
+    }
+
+    private func performVoiceSend(_ text: String) async {
         guard let sessionKey = sessionKeyProvider() else {
             error = "No active session"
             return
@@ -66,6 +80,22 @@ final class VoiceViewModel {
             isWaiting = false
             self.error = error.localizedDescription
         }
+    }
+
+    // MARK: - Sensitive Content
+
+    func confirmSend() async {
+        let text = pendingVoiceText
+        sensitiveWarning = nil
+        pendingVoiceText = nil
+        if let text {
+            await performVoiceSend(text)
+        }
+    }
+
+    func cancelSend() {
+        sensitiveWarning = nil
+        pendingVoiceText = nil
     }
 
     // MARK: - Event Handling

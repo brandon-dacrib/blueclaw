@@ -103,6 +103,7 @@ struct MainTabView: View {
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @State private var publicKeyCopied = false
+    @State private var contentScanningEnabled = ContentScanner.isEnabled
 
     private var connectionModeLabel: String {
         appState.savedConnectionMode?.displayName ?? "ssh+wss://"
@@ -164,6 +165,35 @@ struct SettingsView: View {
             }
 
             UsageSectionView()
+
+            Section {
+                Toggle(isOn: $contentScanningEnabled) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "eye.trianglebadge.exclamationmark")
+                            .foregroundStyle(AppColors.accent)
+                        Text("Content Scanning")
+                    }
+                }
+                .onChange(of: contentScanningEnabled) {
+                    ContentScanner.isEnabled = contentScanningEnabled
+                }
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text("Scans outgoing messages on-device for API keys, secrets, and PII before they reach the server. All scanning runs locally — no data leaves your device.")
+            }
+
+            Section {
+                NavigationLink {
+                    SecurityAuditView()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "shield.lefthalf.filled")
+                            .foregroundStyle(AppColors.accent)
+                        Text("Security Audit")
+                    }
+                }
+            }
 
             // SSH Public Key section — always available if a key exists
             if SSHKeyManager.hasKey, let pubKey = SSHKeyManager.publicKeyOpenSSH() {

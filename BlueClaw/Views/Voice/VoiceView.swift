@@ -121,6 +121,25 @@ struct VoiceView: View {
                 permissionsGranted = await vm.voiceService.requestPermissions()
             }
         }
+        .alert(
+            "Sensitive Content Detected",
+            isPresented: Binding(
+                get: { vm.sensitiveWarning != nil },
+                set: { if !$0 { vm.cancelSend() } }
+            )
+        ) {
+            Button("Send Anyway", role: .destructive) {
+                Task { await vm.confirmSend() }
+            }
+            Button("Edit Message", role: .cancel) {
+                vm.cancelSend()
+            }
+        } message: {
+            if let matches = vm.sensitiveWarning {
+                Text("Your voice message may contain sensitive data that will be sent to the server:\n\n"
+                     + matches.map { "- \($0.category): \($0.matched)" }.joined(separator: "\n"))
+            }
+        }
     }
 
     @ViewBuilder

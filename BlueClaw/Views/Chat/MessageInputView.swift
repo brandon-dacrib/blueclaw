@@ -111,6 +111,25 @@ struct MessageInputView: View {
             }
             .ignoresSafeArea()
         }
+        .alert(
+            "Sensitive Content Detected",
+            isPresented: Binding(
+                get: { viewModel.sensitiveWarning != nil },
+                set: { if !$0 { viewModel.cancelSend() } }
+            )
+        ) {
+            Button("Send Anyway", role: .destructive) {
+                Task { await viewModel.confirmSend() }
+            }
+            Button("Edit Message", role: .cancel) {
+                viewModel.cancelSend()
+            }
+        } message: {
+            if let matches = viewModel.sensitiveWarning {
+                Text("Your message may contain sensitive data that will be sent to the server:\n\n"
+                     + matches.map { "- \($0.category): \($0.matched)" }.joined(separator: "\n"))
+            }
+        }
     }
 
     private var canSend: Bool {
