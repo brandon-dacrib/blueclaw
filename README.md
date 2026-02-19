@@ -19,9 +19,11 @@ BlueClaw is a native iOS client for [OpenClaw](https://github.com/priceconsultin
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/chat.png" width="300" alt="Chat View">
-  &nbsp;&nbsp;
-  <img src="screenshots/settings.png" width="300" alt="Settings View">
+  <img src="screenshots/connect.png" width="250" alt="Connect">
+  &nbsp;
+  <img src="screenshots/chat.png" width="250" alt="Chat">
+  &nbsp;
+  <img src="screenshots/settings.png" width="250" alt="Settings">
 </p>
 
 ## Requirements
