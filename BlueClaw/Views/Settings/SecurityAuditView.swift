@@ -32,15 +32,9 @@ struct SecurityAuditView: View {
                 }
             }
         }
-        .onAppear {
-            if report == nil {
-                report = SecurityAuditor.loadLastReport()
-            }
-        }
         .task {
-            if latestVersion == nil {
-                latestVersion = await SecurityAuditor.fetchLatestVersion()
-            }
+            latestVersion = await SecurityAuditor.fetchLatestVersion()
+            await runScan()
         }
     }
 
