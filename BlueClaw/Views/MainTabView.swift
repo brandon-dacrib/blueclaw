@@ -60,6 +60,8 @@ struct MainTabView: View {
             }
         }
         .tint(AppColors.accent)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarBackground(AppColors.surface, for: .tabBar)
         .onAppear {
             if appState.activeSessionKey == nil {
                 appState.resumeOrStartChat()
