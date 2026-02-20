@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct ConnectionSetupView: View {
     @Environment(AppState.self) private var appState
@@ -6,6 +7,7 @@ struct ConnectionSetupView: View {
     @State private var showQRScanner = false
     @State private var showManualEntry = false
     @State private var showErrorDetail = false
+    @State private var showCameraPermissionAlert = false
 
     var body: some View {
         ZStack {
@@ -122,6 +124,27 @@ struct ConnectionSetupView: View {
                                 )
                             }
                             .padding(.horizontal, 32)
+
+                            // Scan QR Code button
+                            Button {
+                                requestCameraAndShowQR()
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "qrcode.viewfinder")
+                                    Text("Scan QR Code")
+                                        .fontWeight(.medium)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .foregroundStyle(AppColors.textPrimary)
+                                .background(AppColors.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(AppColors.surfaceBorder, lineWidth: 1)
+                                )
+                            }
+                            .padding(.horizontal, 32)
                         }
                     } else {
                         // No saved credentials — show manual form
@@ -147,6 +170,33 @@ struct ConnectionSetupView: View {
         }
         .sheet(isPresented: $showQRScanner) {
             QRScannerSheet(viewModel: $viewModel, appState: appState)
+        }
+        .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("BlueClaw needs camera access to scan QR codes. Please enable it in Settings.")
+        }
+    }
+
+    private func requestCameraAndShowQR() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            showQRScanner = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                if granted {
+                    showQRScanner = true
+                }
+            }
+        case .denied, .restricted:
+            showCameraPermissionAlert = true
+        @unknown default:
+            showQRScanner = true
         }
     }
 
@@ -345,6 +395,22 @@ struct ConnectionSetupView: View {
             }
             .disabled(!viewModel.canConnect)
             .padding(.top, 4)
+
+            // Scan QR Code
+            Button {
+                requestCameraAndShowQR()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "qrcode.viewfinder")
+                    Text("Scan QR Code")
+                        .fontWeight(.medium)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .foregroundStyle(AppColors.accent)
+                .background(AppColors.accent.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
         }
         .padding(24)
         .background(AppColors.surface)

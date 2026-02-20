@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import AVFoundation
 
 struct MessageInputView: View {
     @Bindable var viewModel: ChatViewModel
@@ -7,6 +8,7 @@ struct MessageInputView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showCamera = false
     @State private var showPhotoPicker = false
+    @State private var showCameraPermissionAlert = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,7 +37,7 @@ struct MessageInputView: View {
                     }
 
                     Button {
-                        showCamera = true
+                        requestCameraAccess()
                     } label: {
                         Label("Camera", systemImage: "camera")
                     }
@@ -111,6 +113,16 @@ struct MessageInputView: View {
             }
             .ignoresSafeArea()
         }
+        .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("BlueClaw needs camera access to take photos. Please enable it in Settings.")
+        }
         .alert(
             "Sensitive Content Detected",
             isPresented: Binding(
@@ -129,6 +141,24 @@ struct MessageInputView: View {
                 Text("Your message may contain sensitive data that will be sent to the server:\n\n"
                      + matches.map { "- \($0.category): \($0.matched)" }.joined(separator: "\n"))
             }
+        }
+    }
+
+    private func requestCameraAccess() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else { return }
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            showCamera = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                if granted {
+                    showCamera = true
+                }
+            }
+        case .denied, .restricted:
+            showCameraPermissionAlert = true
+        @unknown default:
+            showCamera = true
         }
     }
 
