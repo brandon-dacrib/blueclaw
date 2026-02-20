@@ -65,6 +65,9 @@ struct MessageInputView: View {
                     .onSubmit {
                         Task { await viewModel.send() }
                     }
+                    .onTapGesture(count: 2) {
+                        isFocused = false
+                    }
 
                 // Voice-to-text
                 VoiceButton { text in

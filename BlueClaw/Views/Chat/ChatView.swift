@@ -50,6 +50,7 @@ struct ChatView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .onChange(of: viewModel.messages.count) {
                     // Slight delay lets the layout settle after the streaming
                     // bubble is removed and the final message is inserted
