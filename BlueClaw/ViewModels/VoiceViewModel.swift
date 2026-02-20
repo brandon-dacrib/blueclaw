@@ -149,5 +149,6 @@ final class VoiceViewModel {
     func stop() {
         voiceService.stopRecording()
         voiceService.stopSpeaking()
+        voiceService.deactivateAudioSession()
     }
 }

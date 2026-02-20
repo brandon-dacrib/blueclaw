@@ -19,6 +19,7 @@ struct BlueClawApp: App {
             case .active:
                 if let since = backgroundSince,
                    Date().timeIntervalSince(since) > 3,
+                   !appState.isVoiceActive,
                    appState.connectionStatus == .connected || appState.isReconnecting {
                     backgroundSince = nil
                     // Silently reconnect transport without clearing app state

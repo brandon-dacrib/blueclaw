@@ -21,6 +21,7 @@ final class VoiceInputService {
     private let synthesizer = AVSpeechSynthesizer()
     private var silenceTask: Task<Void, Never>?
     private var ttsDelegate: TTSDelegate?
+    private var interruptionObserver: NSObjectProtocol?
 
     // MARK: - Permissions
 
@@ -56,8 +57,9 @@ final class VoiceInputService {
 
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.duckOthers, .defaultToSpeaker, .allowBluetoothA2DP])
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            observeInterruptions()
 
             let engine = AVAudioEngine()
             let request = SFSpeechAudioBufferRecognitionRequest()
@@ -135,8 +137,6 @@ final class VoiceInputService {
         recognitionTask = nil
         isRecording = false
         audioLevel = 0
-
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     private func resetSilenceTimer() {
@@ -169,8 +169,9 @@ final class VoiceInputService {
 
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.playback, mode: .default, options: .duckOthers)
+            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.duckOthers, .defaultToSpeaker, .allowBluetoothA2DP])
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            observeInterruptions()
         } catch {
             // Continue anyway
         }
@@ -226,7 +227,46 @@ final class VoiceInputService {
         ttsDelegate = nil
         synthesizer.stopSpeaking(at: .immediate)
         isSpeaking = false
+    }
+
+    /// Fully deactivate the audio session and remove observers.
+    /// Call this when leaving voice mode entirely.
+    func deactivateAudioSession() {
+        removeInterruptionObserver()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    // MARK: - Markdown Stripping
+
+    // MARK: - Audio Interruption Handling
+
+    private func observeInterruptions() {
+        guard interruptionObserver == nil else { return }
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { notification in
+            guard let info = notification.userInfo,
+                  let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+            if type == .ended {
+                // Re-activate the session after interruption (e.g. screen lock, phone call)
+                let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    try? AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
+                }
+            }
+        }
+    }
+
+    private func removeInterruptionObserver() {
+        if let observer = interruptionObserver {
+            NotificationCenter.default.removeObserver(observer)
+            interruptionObserver = nil
+        }
     }
 
     // MARK: - Markdown Stripping

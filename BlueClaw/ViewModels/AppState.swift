@@ -38,6 +38,11 @@ final class AppState {
     // Voice
     private var _voiceViewModel: VoiceViewModel?
 
+    var isVoiceActive: Bool {
+        guard let vm = _voiceViewModel else { return false }
+        return vm.voiceService.isRecording || vm.voiceService.isSpeaking || vm.isWaiting
+    }
+
     // Internal
     let client = GatewayClient()
     let tunnel = SSHTunnelService()
