@@ -65,9 +65,6 @@ struct MessageInputView: View {
                     .onSubmit {
                         Task { await viewModel.send() }
                     }
-                    .onTapGesture(count: 2) {
-                        isFocused = false
-                    }
 
                 // Voice-to-text
                 VoiceButton { text in
@@ -98,6 +95,9 @@ struct MessageInputView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(AppColors.surface)
+            .onTapGesture(count: 2) {
+                isFocused = false
+            }
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
         .onChange(of: selectedPhotoItem) {

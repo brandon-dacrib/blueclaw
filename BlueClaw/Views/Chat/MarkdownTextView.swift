@@ -4,9 +4,13 @@ struct MarkdownTextView: View {
     let content: String
     let isUser: Bool
 
+    private var blocks: [Block] {
+        Self.parseBlocks(from: content)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(parseBlocks().enumerated()), id: \.offset) { _, block in
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 switch block {
                 case .text(let text):
                     Text(makeAttributedString(from: text))
@@ -27,7 +31,7 @@ struct MarkdownTextView: View {
         case code(language: String?, code: String)
     }
 
-    private func parseBlocks() -> [Block] {
+    private static func parseBlocks(from content: String) -> [Block] {
         var blocks: [Block] = []
         var remaining = content[content.startIndex...]
 
