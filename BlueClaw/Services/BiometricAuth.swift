@@ -2,6 +2,11 @@ import Foundation
 import LocalAuthentication
 
 nonisolated enum BiometricAuth {
+    /// How long after a successful authentication before requiring re-auth (30 minutes)
+    private static let gracePeriod: TimeInterval = 30 * 60
+
+    private static let lastAuthKey = "blueclaw.lastAuthenticatedAt"
+
     enum BiometricType {
         case faceID
         case touchID
@@ -41,12 +46,31 @@ nonisolated enum BiometricAuth {
         }
     }
 
+    /// Whether the user is still within the grace period from a previous authentication.
+    static var isWithinGracePeriod: Bool {
+        let lastAuth = UserDefaults.standard.double(forKey: lastAuthKey)
+        guard lastAuth > 0 else { return false }
+        return Date().timeIntervalSince1970 - lastAuth < gracePeriod
+    }
+
+    /// Record a successful authentication timestamp.
+    static func recordAuthentication() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastAuthKey)
+    }
+
     static func authenticate(reason: String = "Authenticate to access your OpenClaw gateway") async -> Bool {
+        // Skip if within grace period
+        if isWithinGracePeriod { return true }
+
         let context = LAContext()
         context.localizedFallbackTitle = "Use Passcode"
 
         do {
-            return try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
+            let result = try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
+            if result {
+                recordAuthentication()
+            }
+            return result
         } catch {
             return false
         }

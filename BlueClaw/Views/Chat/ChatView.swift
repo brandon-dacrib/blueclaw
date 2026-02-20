@@ -51,12 +51,20 @@ struct ChatView: View {
                     .padding(.vertical, 12)
                 }
                 .onChange(of: viewModel.messages.count) {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        proxy.scrollTo("bottom", anchor: .bottom)
+                    // Slight delay lets the layout settle after the streaming
+                    // bubble is removed and the final message is inserted
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(50))
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo("bottom", anchor: .bottom)
+                        }
                     }
                 }
                 .onChange(of: viewModel.streamingContent) {
-                    proxy.scrollTo("bottom", anchor: .bottom)
+                    // Only scroll while content is growing, not when it resets to ""
+                    if !viewModel.streamingContent.isEmpty {
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
                 }
             }
 

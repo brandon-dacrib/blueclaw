@@ -208,6 +208,65 @@ final class AppState {
         usageData = nil
     }
 
+    // MARK: - Silent Reconnect (preserves app state)
+
+    func silentReconnect() async {
+        // Only reconnect the transport layer — don't clear chatViewModels, sessions, agents, etc.
+        log.info("Silent reconnect: re-establishing transport...")
+
+        stopReconnectLoop()
+        stopHealthCheckLoop()
+        eventTask?.cancel()
+        eventTask = nil
+        await client.disconnect()
+        await tunnel.disconnect()
+
+        connectionStatus = .connecting
+
+        do {
+            let displayName = ConnectParams.resolveDisplayName()
+
+            if !sshHost.isEmpty && !sshUser.isEmpty {
+                let token = lastToken.isEmpty
+                    ? (KeychainHelper.retrieve(for: sshHost) ?? "")
+                    : lastToken
+
+                guard let privateKey = SSHKeyManager.retrievePrivateKey() else {
+                    throw BlueClawError.sshError("No SSH key found")
+                }
+
+                let localPort = try await tunnel.connect(
+                    host: sshHost,
+                    port: 22,
+                    username: sshUser,
+                    privateKey: privateKey
+                )
+                let wsURL = "ws://127.0.0.1:\(localPort)"
+                self.hostname = wsURL
+                try await client.connect(hostname: wsURL, token: token, displayName: displayName)
+            } else {
+                let token = lastToken.isEmpty
+                    ? (KeychainHelper.retrieve(for: hostname) ?? "")
+                    : lastToken
+                try await client.connect(hostname: hostname, token: token, displayName: displayName)
+            }
+
+            log.info("Silent reconnect succeeded")
+            connectionStatus = .connected
+            isHealthy = true
+            startEventListener()
+            startHealthCheckLoop()
+
+            // Refresh sessions/agents in background without blocking
+            await loadSessions()
+            await loadAgents()
+        } catch {
+            log.error("Silent reconnect failed: \(String(describing: error), privacy: .public)")
+            // Fall back to reconnect loop
+            startReconnectLoop()
+        }
+    }
+
     // MARK: - Reconnection
 
     func startReconnectLoop() {

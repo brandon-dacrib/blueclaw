@@ -21,17 +21,9 @@ struct BlueClawApp: App {
                    Date().timeIntervalSince(since) > 3,
                    appState.connectionStatus == .connected || appState.isReconnecting {
                     backgroundSince = nil
+                    // Silently reconnect transport without clearing app state
                     Task {
-                        await appState.disconnect()
-                        // Reconnect using saved credentials
-                        if let sshHost = appState.savedSSHHost,
-                           let sshUser = appState.savedSSHUser,
-                           let token = appState.savedToken(for: sshHost) {
-                            await appState.connectViaSSH(sshHost: sshHost, sshUser: sshUser, token: token)
-                        } else if let hostname = appState.savedHostname,
-                                  let token = appState.savedToken(for: hostname) {
-                            await appState.connect(hostname: hostname, token: token)
-                        }
+                        await appState.silentReconnect()
                     }
                 } else {
                     backgroundSince = nil
