@@ -62,7 +62,7 @@ private nonisolated struct AnyEncodableWrapper: Encodable {
 
 // MARK: - Payload decoding helpers
 
-extension RawFrame {
+nonisolated extension RawFrame {
     func decodePayload<T: Decodable>(as type: T.Type) throws -> T {
         guard let payload else {
             throw BlueClawError.missingPayload

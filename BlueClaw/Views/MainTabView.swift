@@ -273,7 +273,7 @@ struct LicensesView: View {
     private var licenseText: String {
         guard let url = Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: nil)
                 ?? Bundle.main.url(forResource: "THIRD_PARTY_NOTICES", withExtension: "txt"),
-              let text = try? String(contentsOf: url) else {
+              let text = try? String(contentsOf: url, encoding: .utf8) else {
             return "License information unavailable."
         }
         return text

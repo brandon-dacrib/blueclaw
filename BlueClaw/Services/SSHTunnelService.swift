@@ -6,7 +6,7 @@ import NIOPosix
 import NIOSSH
 import os.log
 
-private let log = Logger(subsystem: "priceconsulting.BlueClaw", category: "SSHTunnel")
+private nonisolated let log = Logger(subsystem: "priceconsulting.BlueClaw", category: "SSHTunnel")
 
 /// Manages an SSH tunnel: connects to a remote host, starts a local TCP listener
 /// that forwards connections through SSH directTCPIP channels to `localhost:18789`
@@ -172,7 +172,7 @@ actor SSHTunnelService {
 /// Trust-On-First-Use host key validator.
 /// Accepts the host key on first connection and stores its fingerprint.
 /// Rejects connections if the host key changes.
-private final class TOFUValidator: NIOSSHClientServerAuthenticationDelegate, @unchecked Sendable {
+private nonisolated final class TOFUValidator: NIOSSHClientServerAuthenticationDelegate, @unchecked Sendable {
     let hostname: String
 
     init(hostname: String) {

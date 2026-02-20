@@ -211,9 +211,8 @@ final class SecurityAuditor {
 
     // MARK: - Latest Version Lookup
 
-    private static let tagsURL = URL(string: "https://api.github.com/repos/openclaw/openclaw/tags?per_page=30")!
-
     nonisolated static func fetchLatestVersion() async -> String? {
+        let tagsURL = URL(string: "https://api.github.com/repos/openclaw/openclaw/tags?per_page=30")!
         do {
             var request = URLRequest(url: tagsURL)
             request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")

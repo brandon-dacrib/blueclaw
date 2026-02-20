@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-private let log = Logger(subsystem: "priceconsulting.BlueClaw", category: "GatewayClient")
+private nonisolated let log = Logger(subsystem: "priceconsulting.BlueClaw", category: "GatewayClient")
 
 actor GatewayClient {
     let service = WebSocketService()
