@@ -38,6 +38,8 @@ final class VoiceViewModel {
         if voiceService.isRecording {
             voiceService.stopRecording()
         } else {
+            // Ensure background audio is running so voice survives screen lock
+            voiceService.startBackgroundAudio()
             voiceService.startRecording()
         }
     }

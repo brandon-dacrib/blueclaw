@@ -22,6 +22,7 @@ final class VoiceInputService {
     private var silenceTask: Task<Void, Never>?
     private var ttsDelegate: TTSDelegate?
     private var interruptionObserver: NSObjectProtocol?
+    private var silencePlayer: AVAudioPlayer?
 
     // MARK: - Permissions
 
@@ -209,7 +210,6 @@ final class VoiceInputService {
         let delegate = TTSDelegate { [weak self] in
             Task { @MainActor [weak self] in
                 self?.isSpeaking = false
-                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
                 completion?()
             }
         }
@@ -232,11 +232,63 @@ final class VoiceInputService {
     /// Fully deactivate the audio session and remove observers.
     /// Call this when leaving voice mode entirely.
     func deactivateAudioSession() {
+        stopBackgroundAudio()
         removeInterruptionObserver()
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     // MARK: - Markdown Stripping
+
+    // MARK: - Background Keep-Alive
+
+    /// Starts a silent audio loop to keep the app alive in the background.
+    /// Call when entering voice mode; stop when leaving.
+    func startBackgroundAudio() {
+        guard silencePlayer == nil else { return }
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playAndRecord, mode: .default, options: [.duckOthers, .defaultToSpeaker, .allowBluetoothA2DP])
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            observeInterruptions()
+
+            // Generate a 1-second silent WAV in memory
+            let sampleRate: UInt32 = 44100
+            let numSamples = Int(sampleRate)
+            let bytesPerSample: UInt16 = 2
+            let dataSize = UInt32(numSamples * Int(bytesPerSample))
+            var wav = Data()
+            // RIFF header
+            wav.append(contentsOf: [0x52, 0x49, 0x46, 0x46] as [UInt8]) // "RIFF"
+            wav.append(contentsOf: (36 + dataSize).littleEndianBytes)
+            wav.append(contentsOf: [0x57, 0x41, 0x56, 0x45] as [UInt8]) // "WAVE"
+            // fmt chunk
+            wav.append(contentsOf: [0x66, 0x6D, 0x74, 0x20] as [UInt8]) // "fmt "
+            wav.append(contentsOf: UInt32(16).littleEndianBytes)
+            wav.append(contentsOf: UInt16(1).littleEndianBytes) // PCM
+            wav.append(contentsOf: UInt16(1).littleEndianBytes) // mono
+            wav.append(contentsOf: sampleRate.littleEndianBytes)
+            wav.append(contentsOf: (sampleRate * UInt32(bytesPerSample)).littleEndianBytes)
+            wav.append(contentsOf: bytesPerSample.littleEndianBytes)
+            wav.append(contentsOf: UInt16(16).littleEndianBytes) // bits per sample
+            // data chunk
+            wav.append(contentsOf: [0x64, 0x61, 0x74, 0x61] as [UInt8]) // "data"
+            wav.append(contentsOf: dataSize.littleEndianBytes)
+            wav.append(Data(count: Int(dataSize))) // silence
+
+            let player = try AVAudioPlayer(data: wav)
+            player.numberOfLoops = -1 // loop forever
+            player.volume = 0.0
+            player.play()
+            silencePlayer = player
+        } catch {
+            // Non-fatal — voice will work but may not survive background
+        }
+    }
+
+    func stopBackgroundAudio() {
+        silencePlayer?.stop()
+        silencePlayer = nil
+    }
 
     // MARK: - Audio Interruption Handling
 
@@ -288,6 +340,20 @@ final class VoiceInputService {
         // Collapse whitespace
         result = result.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+// MARK: - WAV Helpers
+
+private extension UInt32 {
+    var littleEndianBytes: [UInt8] {
+        [UInt8(self & 0xFF), UInt8((self >> 8) & 0xFF), UInt8((self >> 16) & 0xFF), UInt8((self >> 24) & 0xFF)]
+    }
+}
+
+private extension UInt16 {
+    var littleEndianBytes: [UInt8] {
+        [UInt8(self & 0xFF), UInt8((self >> 8) & 0xFF)]
     }
 }
 
